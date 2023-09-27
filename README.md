@@ -2,6 +2,8 @@
 
 ## Proof of concept
 
+Build using Weaviate and Llama index
+
 This repository is a super-simple presentation or idea of how the autonomous testing agent works.
 
 Here is a hackathon solution: [github repo](https://github.com/liskovich/RicAI_Autonomous_Agents_Hackathon)
