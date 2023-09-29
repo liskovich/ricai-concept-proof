@@ -2,8 +2,6 @@
 
 ## Proof of concept
 
-Build using Weaviate and Llama index
-
 This repository is a super-simple presentation or idea of how the autonomous testing agent works.
 
 Here is a hackathon solution: [github repo](https://github.com/liskovich/RicAI_Autonomous_Agents_Hackathon)
@@ -23,7 +21,11 @@ def calculate_square_area(side_length):
 
 def calculate_discounted_price(original_price, discount_percentage):
     if original_price > 0 and 0 <= discount_percentage <= 100:
-        discounted_price = original_price - (original_price * discount_percentage / 100)
+        # correct calculation
+        # discounted_price = original_price - (original_price * discount_percentage / 100)
+        
+        # calculation with error (multiplying by 2 was not required)
+        discounted_price = original_price - (2 * original_price * discount_percentage / 100)
         return discounted_price
     else:
         return 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100'
@@ -73,78 +75,97 @@ The software has no external dependencies and can be used in any Python environm
 
 The produced output of test case descriptions:
 
-| Test Case | Description |
-| --- | --- |
-| Test Case 1 | Verify that the function returns the correct discounted price when the original price and discount percentage are valid |
-| Test Case 2 | Verify that the function returns an error message when the original price is less than or equal to 0 |
-| Test Case 3 | Verify that the function returns an error message when the discount percentage is less than 0 |
-| Test Case 4 | Verify that the function returns an error message when the discount percentage is greater than 100 |
-| Test Case 5 | Verify that the function returns an error message when both the original price and discount percentage are invalid |
-| Test Case 6 | Verify that the function returns an error message when the original price is valid but the discount percentage is invalid |
-| Test Case 7 | Verify that the function returns an error message when the original price is invalid but the discount percentage is valid |
+| Test Case | Description | Expected Output |
+| --- | --- | --- |
+| Test Case 1 | Test with valid input: original_price = 100, discount_percentage = 10 | 90.0 |
+| Test Case 2 | Test with valid input: original_price = 50, discount_percentage = 50 | 25.0 |
+| Test Case 3 | Test with valid input: original_price = 200, discount_percentage = 25 | 150.0 |
+| Test Case 4 | Test with invalid input: original_price = -100, discount_percentage = 10 | 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100' |
+| Test Case 5 | Test with invalid input: original_price = 100, discount_percentage = 150 | 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100' |
+| Test Case 6 | Test with invalid input: original_price = 0, discount_percentage = 50 | 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100' |
 
 The produced output of unit tests:
 
 ```python
 import pytest
-from my_module import calculate_discounted_price
 
-# Test Case 1
-def test_calculate_discounted_price_valid_input():
+from your_module import calculate_discounted_price
+
+def test_valid_input_case_1():
     original_price = 100
-    discount_percentage = 20
-    expected_discounted_price = 80
+    discount_percentage = 10
+    expected_output = 90.0
 
-    assert calculate_discounted_price(original_price, discount_percentage) == expected_discounted_price
+    assert calculate_discounted_price(original_price, discount_percentage) == expected_output
 
-# Test Case 2
-def test_calculate_discounted_price_invalid_original_price():
+def test_valid_input_case_2():
+    original_price = 50
+    discount_percentage = 50
+    expected_output = 25.0
+
+    assert calculate_discounted_price(original_price, discount_percentage) == expected_output
+
+def test_valid_input_case_3():
+    original_price = 200
+    discount_percentage = 25
+    expected_output = 150.0
+
+    assert calculate_discounted_price(original_price, discount_percentage) == expected_output
+
+def test_invalid_input_case_4():
+    original_price = -100
+    discount_percentage = 10
+    expected_output = 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100'
+
+    assert calculate_discounted_price(original_price, discount_percentage) == expected_output
+
+def test_invalid_input_case_5():
+    original_price = 100
+    discount_percentage = 150
+    expected_output = 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100'
+
+    assert calculate_discounted_price(original_price, discount_percentage) == expected_output
+
+def test_invalid_input_case_6():
     original_price = 0
-    discount_percentage = 20
-    expected_error_message = "Invalid original price"
+    discount_percentage = 50
+    expected_output = 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100'
 
-    assert calculate_discounted_price(original_price, discount_percentage) == expected_error_message
-
-# Test Case 3
-def test_calculate_discounted_price_invalid_discount_percentage():
-    original_price = 100
-    discount_percentage = -10
-    expected_error_message = "Invalid discount percentage"
-
-    assert calculate_discounted_price(original_price, discount_percentage) == expected_error_message
-
-# Test Case 4
-def test_calculate_discounted_price_invalid_discount_percentage():
-    original_price = 100
-    discount_percentage = 110
-    expected_error_message = "Invalid discount percentage"
-
-    assert calculate_discounted_price(original_price, discount_percentage) == expected_error_message
-
-# Test Case 5
-def test_calculate_discounted_price_invalid_input():
-    original_price = 0
-    discount_percentage = -10
-    expected_error_message = "Invalid original price and discount percentage"
-
-    assert calculate_discounted_price(original_price, discount_percentage) == expected_error_message
-
-# Test Case 6
-def test_calculate_discounted_price_invalid_discount_percentage():
-    original_price = 100
-    discount_percentage = -10
-    expected_error_message = "Invalid discount percentage"
-
-    assert calculate_discounted_price(original_price, discount_percentage) == expected_error_message
-
-# Test Case 7
-def test_calculate_discounted_price_invalid_original_price():
-    original_price = 0
-    discount_percentage = 20
-    expected_error_message = "Invalid original price"
-
-    assert calculate_discounted_price(original_price, discount_percentage) == expected_error_message
+    assert calculate_discounted_price(original_price, discount_percentage) == expected_output
 ```
+
+When running these tests, we get the foollowing oucome:
+
+|         filepath          |         function          | passed | failed | SUBTOTAL |
+| ------------------------- | ------------------------- | -----: | -----: | -------: |
+| tests\test_sample_code.py | test_valid_input_case_1   |      0 |      1 |        1 |
+| tests\test_sample_code.py | test_valid_input_case_2   |      0 |      1 |        1 |
+| tests\test_sample_code.py | test_valid_input_case_3   |      0 |      1 |        1 |
+| tests\test_sample_code.py | test_invalid_input_case_4 |      1 |      0 |        1 |
+| tests\test_sample_code.py | test_invalid_input_case_5 |      1 |      0 |        1 |
+| tests\test_sample_code.py | test_invalid_input_case_6 |      1 |      0 |        1 |
+| TOTAL                     |                           |      3 |      3 |        6 |
+
+We see that some of the test cases failed (due to the error that is present in the function itself).
+Next, we combine our faulty code, test descriptions, the result of running tests and the requirements in order to give feedback and propose fixes, then pass it to LLM. The result is the following:
+
+```
+Based on the code and the test results, here are some suggestions to improve the code:
+
+1. Fix the calculation error in the `calculate_discounted_price` function. The line `discounted_price = original_price - (2 * original_price * discount_percentage / 100)` should be changed to `discounted_price = original_price - (original_price * discount_percentage / 100)`. The multiplication by 2 is not required.
+
+2. Update the error message in the `else` block of the `calculate_discounted_price` function to provide more specific information about the invalid input. For example, instead of a generic message, you can specify that the original price must be greater than 0 and the discount percentage must be between 0 and 100.
+
+3. Update the test cases to reflect the corrected calculation in the `calculate_discounted_price` function. The expected output values should be adjusted accordingly.
+
+4. Review the failed test cases and ensure that the code is handling invalid input correctly. For example, the test case `test_invalid_input_case_4` should fail because the code is not correctly handling negative original prices. The code should return the same error message as specified in the test case.
+
+5. Consider adding additional test cases to cover different scenarios, such as edge cases (e.g., original price = 0, discount percentage = 0) and boundary cases (e.g., original price = 1, discount percentage = 100).
+
+By implementing these suggestions, you should be able to fix the bugs in the code and improve its functionality.
+```
+
+And here we can see that as the first point int the improvement list, is the suggestion to remove multiplication by 2, which is exactly what we would expect! There are also some other decent suggestions one might consider using.
 
 ## How to try it myself?
 
@@ -155,6 +176,16 @@ WEAVIATE_URL=<your_weaviate_cloud_url>
 WEAVIATE_API_KEY=<your_weaviate_auth_token>
 ```
 
-And run the `main.py` file
+Then follow this step-by-step process:
+
+1. Inside `main.py` uncomment the line 295 with `main()` call, run the `main.py` file.
+2. If all goes well, you will receive a table with test case descriptions in markdown format and a `pytest` unit tests. Copy and paste the generated unit tests somewhere for later use. Comment out the line with `main()` call.
+3. Create a new directory `tests` and paste the generate `pytest` unit tests in the file `tests/test_sample_code.py` (you might need to create it first).
+4. Uncomment the line 301 with `run_tests()` call, run the `main.py` file.
+5. Again, if all goes well, you will receive a table with test report in markdown format. Copy and paste it somewhere for later use. Comment out the line with `run_tests()` call.
+6. Again, inside `main.py` uncomment the line 295 with `main()` call.
+7. Find the function `generate_suggestions` and inside the two palceholders paste generated unit tests and test reports appropriately.
+8. Uncomment the line 291 with `generate_suggestions(code_feature)` call, run the `main.py` file.
+9. Finally, you will (hopefully) receive generated suggestions and recommendations in your cmd line!
 
 Running the code may consume your OpenAI credits and take some time to execute!
