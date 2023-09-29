@@ -89,7 +89,7 @@ The produced output of unit tests:
 ```python
 import pytest
 
-from your_module import calculate_discounted_price
+from sample_code import calculate_discounted_price
 
 def test_valid_input_case_1():
     original_price = 100
