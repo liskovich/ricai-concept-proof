@@ -1,6 +1,7 @@
 import weaviate
 import os
 import openai
+import pytest
 
 from dotenv import load_dotenv
 from typing import List
@@ -11,6 +12,7 @@ from llama_index import (
     StorageContext,
     ServiceContext,
     set_global_service_context,
+    load_index_from_storage,
 )
 from llama_index.node_parser import SimpleNodeParser
 from llama_index.vector_stores import WeaviateVectorStore
@@ -76,7 +78,7 @@ def init_weaviate():
         ]
     }
 
-    client.schema.create(schema)
+    # client.schema.create(schema)
     return client
 
 
@@ -124,7 +126,11 @@ def calculate_square_area(side_length):
     """
 def calculate_discounted_price(original_price, discount_percentage):
     if original_price > 0 and 0 <= discount_percentage <= 100:
-        discounted_price = original_price - (original_price * discount_percentage / 100)
+        # correct calculation
+        # discounted_price = original_price - (original_price * discount_percentage / 100)
+        
+        # calculation with error (multiplying by 2 was not required)
+        discounted_price = original_price - (2 * original_price * discount_percentage / 100)
         return discounted_price
     else:
         return 'Invalid input: Original price must be greater than 0, and discount percentage must be between 0 and 100'""",
@@ -144,10 +150,7 @@ def store_srs_doc(w_client, srs_docs):
     )
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     index = VectorStoreIndex(nodes, storage_context=storage_context)
-
-    # Build query engine
-    query_engine = index.as_query_engine()
-    return query_engine
+    return index
 
 
 def store_code_files(w_client, codebase):
@@ -163,10 +166,33 @@ def store_code_files(w_client, codebase):
     )
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     index = VectorStoreIndex(nodes, storage_context=storage_context)
+    return index
 
-    # Build query engine
-    query_engine = index.as_query_engine()
-    return query_engine
+
+def generate_suggestions(code_feature):
+    # "place the test report table here (for demo purposes copy from the cmd line directly!)
+    test_suite_results = """
+
+    """
+    # place your previously generated unit test code here (for demo purposes copy from the cmd line directly!)
+    genereated_unit_tests = """
+    
+    """
+
+    # OpenAI chat call to generate feedback / suggest fixes to our code
+    messages = [
+        ChatMessage(
+            role="system",
+            content="You are a senior software tester with several years of expertise in enterprise software testing, you are given some code, the tests for it, test report and you need to provide suggestions on how to fix bugs in the code.",
+        ),
+        ChatMessage(
+            role="user",
+            content=f"Generate the feedback and suggestions on how to improve the following code \n{code_feature}\n given unit tests: \n{genereated_unit_tests}\n and the test run report: \n{test_suite_results}\n",
+        ),
+    ]
+
+    code_fix_suggest = OpenAI().chat(messages)
+    print(code_fix_suggest.message.content)
 
 
 def main():
@@ -182,32 +208,51 @@ def main():
     )
     set_global_service_context(service_context)
 
-    # separate query engine tools for each of the knowledge bases
-    srs_tool = QueryEngineTool.from_defaults(
-        query_engine=store_srs_doc(w_client, srs_docs=srs_document),
-        name="SRS document tool",
-        description="Useful for answering questions about the software requirement specification of the program.",
-    )
+    # retrieve index
+    try:
+        srs_vector_store = WeaviateVectorStore(
+            weaviate_client=w_client, index_name="BusinessDocs", text_key="content"
+        )
+        code_vector_store = WeaviateVectorStore(
+            weaviate_client=w_client, index_name="CodeFiles", text_key="content"
+        )
+        srs_storage_context = StorageContext.from_defaults(
+            vector_store=srs_vector_store
+        )
+        code_storage_context = StorageContext.from_defaults(
+            vector_store=code_vector_store
+        )
 
-    code_tool = QueryEngineTool.from_defaults(
-        query_engine=store_code_files(w_client, codebase=codebase_files),
-        name="Codebase tool",
-        description="Useful for answering questions about the codebase of the program.",
-    )
+        srs_index = load_index_from_storage(storage_context=srs_storage_context)
+        code_index = load_index_from_storage(storage_context=code_storage_context)
+    except:
+        srs_index = store_srs_doc(w_client, srs_docs=srs_document)
+        code_index = store_code_files(w_client, codebase=codebase_files)
 
-    # a main query engine which consolidates other sub-engines
-    query_engine = SubQuestionQueryEngine.from_defaults(
-        query_engine_tools=[
-            srs_tool,
-            code_tool,
-        ],
-        verbose=False,
-    )
+    # From here we can build a query engine, but for demo I will directly use weawiate python client
+    # query weaviate to retrieve SRS document and code
+    prompt = "calculate_discounted_price"
 
-    response = query_engine.query(
-        "Give me the code and the software requirement specification for the function calculate_discounted_price"
+    srs_response = (
+        w_client.query.get("BusinessDocs", properties=["content"])
+        .with_bm25(query=prompt)
+        .with_limit(1)
+        .do()
     )
-    print(response.response)
+    srs_doc_feature = srs_response["data"]["Get"]["BusinessDocs"][0]["content"]
+
+    print(srs_doc_feature)
+    print("\n--------------------------------------\n")
+
+    code_response = (
+        w_client.query.get("CodeFiles", properties=["content"])
+        .with_bm25(query=prompt)
+        .with_limit(1)
+        .do()
+    )
+    code_feature = code_response["data"]["Get"]["CodeFiles"][0]["content"]
+
+    print(code_feature)
     print("\n--------------------------------------\n")
 
     # OpenAI chat call that takes requirements + code and generates test case descriptions
@@ -218,7 +263,7 @@ def main():
         ),
         ChatMessage(
             role="user",
-            content=f"Generate a table in markdown which contains test cases and their descriptions given the following info: {response.response}",
+            content=f"Generate a table in markdown which contains test cases and their descriptions given the following code: \n{code_feature}\n and its functionality requirements: \n{srs_doc_feature}\n",
         ),
     ]
 
@@ -234,12 +279,27 @@ def main():
         ),
         ChatMessage(
             role="user",
-            content=f"Generate a unit tests in pytest given the following test case descriptions: {test_cases.message.content}",
+            content=f"Generate unit tests in pytest given the following test case descriptions: \n{test_cases.message.content}\n as well as the functionality requirements its requirements: \n{srs_doc_feature}\n",
         ),
     ]
 
     unit_tests = OpenAI().chat(messages)
     print(unit_tests.message.content)
+    print("\n--------------------------------------\n")
+
+    # TODO: uncomment after running the tests and recieving a test report
+    # generate_suggestions(code_feature)
 
 
-main()
+# TODO: uncomment to run the overall demo agent workflow
+# main()
+
+
+def run_tests():
+    pytest.main(
+        ["-s", "--md-report", "--md-report-verbose=1", "tests/test_sample_code.py"]
+    )
+
+
+# TODO: uncomment to run unit tests
+# run_tests()
