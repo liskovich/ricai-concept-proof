@@ -4,7 +4,7 @@
 
 This repository is a super-simple presentation or idea of how the autonomous testing agent works.
 
-Here is a hackathon solution: [github repo](https://github.com/liskovich/RicAI_Autonomous_Agents_Hackathon)
+Here is a hackathon solution: [github repo](https://github.com/AutoDevTestAgent/ricai-autonomous-agents-hackathon)
 
 It takes code and software requirements specification as input, and produces tests as output which can then be run on a CI/CD pipeline for example. For the sake of simplicity, only the test generation part is demonstrated.
 
